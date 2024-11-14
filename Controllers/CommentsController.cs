@@ -1,91 +1,144 @@
 ﻿using BlogAPI.Data;
+using BlogAPI.Dtos;
 using BlogAPI.Models;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace BlogAPI.Controllers
 {
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
-    public class CommentsController(BlogContext context) : ControllerBase
+    public class CommentsController : ControllerBase
     {
+        private readonly BlogContext _context;
+        private readonly UserManager<BlogUser> _userManager;
+
+        public CommentsController(BlogContext context, UserManager<BlogUser> userManager)
+        {
+            _context = context;
+            _userManager = userManager;
+        }
+
         [HttpGet("{id:int}")]
         public async Task<ActionResult<Comment>> GetCommentById(int id)
         {
-            var comment = await context.Comments.FindAsync(id);
+            Comment? comment = await _context.Comments.FindAsync(id);
 
             if (comment == null)
-            {
                 return NotFound();
-            }
 
-            return Ok(comment);
+            CommentDto response = new(comment.Id, comment.Content, comment.AuthorId);
+
+            return Ok(response);
         }
 
-        [HttpPost]
-        public async Task<ActionResult<Comment>> CreateNewComment(Comment newComment)
+        [HttpGet("{author}")]
+        public async Task<ActionResult<List<Comment>>> GetCommentsByAuthor(string author)
         {
-            var post = await context.Posts.FindAsync(newComment.PostId);
+            BlogUser? user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == author);
+
+            if (user == null)
+                return NotFound();
+
+            List<Comment> comments = await _context.Comments.Where(c => c.Author == user).ToListAsync();
+            List<CommentDto> commentsResponse = [];
+
+            foreach (Comment comment in comments)
+            {
+                CommentDto dto = new(comment.Id, comment.Content, comment.AuthorId);
+
+                commentsResponse.Add(dto);
+            }
+
+            return Ok(commentsResponse);
+        }
+
+        [HttpPost, Authorize]
+        public async Task<ActionResult<Comment>> CreateNewComment([FromBody] CommentDto newComment,
+            [FromQuery] int postId)
+        {
+            Post? post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == postId);
             if (post == null)
-            {
                 return NotFound("Post not found");
-            }
 
-            context.Comments.Add(newComment);
-            await context.SaveChangesAsync();
+            BlogUser? currentUser = await _userManager.GetUserAsync(User);
 
-            return CreatedAtAction(nameof(GetCommentById), new { id = newComment.Id }, newComment);
+            if (currentUser == null)
+                return Unauthorized();
+
+            Comment commentEntity = new()
+            {
+                Content = newComment.Content,
+                PostId = post.Id,
+                Author = currentUser,
+                AuthorId = currentUser.Id
+            };
+
+            _context.Comments.Add(commentEntity);
+            await _context.SaveChangesAsync();
+
+            CommentDto responseDto = new(commentEntity.Id, commentEntity.Content, commentEntity.AuthorId);
+
+            return CreatedAtAction(nameof(GetCommentById), new { id = commentEntity.Id }, responseDto);
         }
 
-        [HttpPut("{id:int}")]
-        public async Task<ActionResult<Comment>> UpdateComment(int id, Comment comment)
+        [HttpPut("{id:int}"), Authorize]
+        public async Task<ActionResult<Comment>> UpdateComment(CommentDto comment, int id)
         {
-            if (id != comment.Id)
-            {
-                return BadRequest();
-            }
+            if (!CommentExists(id))
+                return NotFound("Comment not found");
 
-            context.Entry(comment).State = EntityState.Modified;
+            Comment? commentEntity = await _context.Comments.FindAsync(id);
+
+            BlogUser? currentUser = await _userManager.GetUserAsync(User);
+
+            if (!UserIsAuthor(currentUser, commentEntity.AuthorId))
+                return Unauthorized();
+
+            commentEntity.Content = comment.Content;
 
             try
             {
-                await context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
                 if (!CommentExists(id))
-                {
                     return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
             }
 
-            return NoContent();
+            return Ok();
         }
 
-        [HttpDelete("{id:int}")]
+        [HttpDelete("{id:int}"), Authorize]
         public async Task<ActionResult<Comment>> DeleteComment(int id)
         {
-            var comment = await context.Comments.FindAsync(id);
-
-            if (comment == null)
-            {
+            if (!CommentExists(id))
                 return NotFound();
-            }
 
-            context.Comments.Remove(comment);
-            await context.SaveChangesAsync();
+            Comment? commentToRemove = await _context.Comments.FindAsync(id);
+
+            BlogUser? currentUser = await _userManager.GetUserAsync(User);
+
+            if (!UserIsAuthor(currentUser, commentToRemove.AuthorId))
+                return Unauthorized();
+
+            _context.Comments.Remove(commentToRemove);
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
         private bool CommentExists(int id)
         {
-            return context.Comments.Any(c => c.Id == id);
+            return _context.Comments.Any(c => c.Id == id);
+        }
+
+        private static bool UserIsAuthor(BlogUser? user, string commentId)
+        {
+            return user?.Id == commentId;
         }
     }
 }

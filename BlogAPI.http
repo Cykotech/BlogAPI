@@ -1,6 +1,6 @@
 @BlogAPI_HostAddress = https://localhost:44306
-@JWT_Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwibmFtZSI6IkN5a290ZWNoIiwibmJmIjoxNzMwMDQ5MTMxLCJleHAiOjE3MzAwNTI3MzEsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0OjUxODIiLCJhdWQiOiJCbG9nQXBpIn0.eLMOEHFkd0uYmveQPncTlsUc3p_sUsYWpSluRhhyklY"
 
+###
 
 GET {{BlogAPI_HostAddress}}/Posts
 Accept: application/json

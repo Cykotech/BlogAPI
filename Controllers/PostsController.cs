@@ -1,98 +1,118 @@
-﻿using BlogAPI.Controllers;
-using BlogAPI.Data;
+﻿using BlogAPI.Data;
+using BlogAPI.Dtos;
 using BlogAPI.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace BlogAPI.Controllers
 {
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
-    public class PostsController(BlogContext context) : ControllerBase
+    public class PostsController : ControllerBase
     {
-        private readonly BlogContext _context = context;
-        
-        [HttpGet]
-        public async Task<ActionResult<List<Post>>> GetAll()
+        private readonly BlogContext _context;
+        private readonly UserManager<BlogUser> _userManager;
+
+        public PostsController(BlogContext context, UserManager<BlogUser> userManager)
         {
-            var posts = await context.Posts.ToListAsync();
+            _context = context ?? throw new NullReferenceException();
+            _userManager = userManager ?? throw new NullReferenceException();
+        }
 
-            if (posts == null)
+        [HttpGet]
+        public async Task<ActionResult<List<PostDto>>> GetAll()
+        {
+            List<Post> posts = await _context.Posts.Include(post => post.Author).ToListAsync();
+            List<PostDto> response = [];
+
+            foreach (Post post in posts)
             {
-                return NotFound();
+                response.Add(new PostDto(post.Id, post.Title, post.Content, post.Author.UserName));
             }
 
-            foreach (var post in posts)
-            {
-                var comments = await context.Comments.Where(c => c.PostId == post.Id).ToListAsync();
-
-                post.Comments = comments;
-            }
-
-            return Ok(posts);
+            return Ok(response);
         }
 
         [HttpGet("{id:int}")]
-        public async Task<ActionResult<Post>> GetById(int id)
+        public async Task<ActionResult<PostDto>> GetById(int id)
         {
-            var singlePost = await context.Posts.FindAsync(id);
+            Post? post = await _context.Posts
+                .Include(post => post.Author)
+                .FirstOrDefaultAsync(post => post.Id == id);
 
-            if (singlePost == null)
-            {
+            if (post == null)
                 return NotFound();
-            }
 
-            var comments = await context
-                .Comments.Where(comment => comment.PostId == id)
+            PostDto response = new(post.Id, post.Title, post.Content, post.Author.UserName);
+
+            return Ok(response);
+        }
+
+        [HttpGet("{authorUserName}")]
+        public async Task<ActionResult<List<PostDto>>> GetByAuthor(string authorUserName)
+        {
+            if (!_context.Users.Any(u => u.UserName == authorUserName))
+                return NotFound("User not registered");
+
+            List<Post> postsByAuthor = await _context.Posts.Include(post => post.Author)
+                .Where(p => p.Author.UserName == authorUserName)
                 .ToListAsync();
+            List<PostDto> response = [];
 
-            singlePost.Comments = comments;
+            foreach (Post post in postsByAuthor)
+            {
+                response.Add(new PostDto(post.Id, post.Title, post.Content, post.Author.UserName));
+            }
 
-            return Ok(singlePost);
+            return Ok(response);
         }
 
-        [HttpPost]
-        // [Authorize]
-        public async Task<ActionResult<Post>> CreateNewPost(Post newPost)
+        [HttpPost, Authorize]
+        public async Task<ActionResult<Post>> CreateNewPost([FromBody] PostDto newPost)
         {
-            foreach (var claim in User.Claims)
-            {
-                Console.WriteLine($"Claim: {claim}");
-            }
-            var userClaim = await User.Claims.FirstOrDefaultAsync(u => u.Type == "sub");
-            
-            Console.WriteLine($"User stuffs: {userClaim}");
-            
-            var author = await _context.Users.FirstOrDefaultAsync(u => u.UserName == userClaim);
+            BlogUser? currentUser = await _userManager.GetUserAsync(User);
 
-            if (author == null)
-            {
-                return BadRequest();
-            }
-            
-            newPost.Author = author;
-            
-            context.Posts.Add(newPost);
-            await context.SaveChangesAsync();
+            if (currentUser == null)
+                return Unauthorized();
 
-            return CreatedAtAction(nameof(GetById), new { id = newPost.Id }, newPost);
+            Post postEntity = new()
+            {
+                Title = newPost.Title,
+                Content = newPost.Content,
+                Author = currentUser,
+                AuthorId = currentUser.Id
+            };
+
+            _context.Posts.Add(postEntity);
+            await _context.SaveChangesAsync();
+
+            PostDto responseDto = new(postEntity.Id, postEntity.Title, postEntity.Content, postEntity.Author.UserName!);
+
+            return CreatedAtAction(nameof(GetById), new { id = postEntity.Id }, responseDto);
         }
 
-        [HttpPut("{id:int}")]
-        public async Task<ActionResult<Post>> UpdatePost(int id, Post post)
+        [Authorize, HttpPut("{id:int}")]
+        public async Task<ActionResult<Post>> UpdatePost(int id, PostDto post)
         {
-            if (id != post.Id)
-            {
-                return BadRequest();
-            }
+            if (!PostExists(id))
+                return NotFound();
+            
+            Post? postEntity = await _context.Posts.Include(p => p.Author)
+                .FirstOrDefaultAsync(p => p.Id == id);
 
-            context.Entry(post).State = EntityState.Modified;
+            BlogUser? currentUser = await _userManager.GetUserAsync(User);
+
+            if (!UserIsAuthor(currentUser, postEntity!.Author.Id))
+                return Unauthorized();
+
+            postEntity.Title = post.Title;
+            postEntity.Content = post.Content;
 
             try
             {
-                await context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -100,34 +120,41 @@ namespace BlogAPI.Controllers
                 {
                     return NotFound();
                 }
-                else
-                {
-                    throw;
-                }
+
+                throw;
             }
 
             return NoContent();
         }
 
-        [HttpDelete("{id:int}")]
+        [HttpDelete("{id:int}"), Authorize]
         public async Task<ActionResult<Post>> DeletePost(int id)
         {
-            var postToRemove = await context.Posts.FindAsync(id);
-
-            if (postToRemove == null)
-            {
+            if (!PostExists(id))
                 return NotFound();
-            }
+            
+            Post? postToRemove = await _context.Posts.Include(p => p.Author)
+                .FirstOrDefaultAsync(p => p.Id == id);
 
-            context.Posts.Remove(postToRemove);
-            await context.SaveChangesAsync();
+            BlogUser? currentUser = await _userManager.GetUserAsync(User);
+
+            if (!UserIsAuthor(currentUser, postToRemove!.Author.Id))
+                return Unauthorized();
+
+            _context.Posts.Remove(postToRemove);
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
         private bool PostExists(int id)
         {
-            return context.Posts.Any(post => post.Id == id);
+            return _context.Posts.Any(post => post.Id == id);
+        }
+
+        private static bool UserIsAuthor(BlogUser? user, string authorId)
+        {
+            return user?.Id == authorId;
         }
     }
 }

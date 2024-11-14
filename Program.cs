@@ -1,7 +1,7 @@
-using System.Text;
 using BlogAPI.Data;
+using BlogAPI.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,22 +18,13 @@ builder.Services.AddDbContext<BlogContext>(options =>
         new MySqlServerVersion(new Version(8, 0, 39))
     )
 );
-builder
-    .Services.AddAuthentication("Bearer")
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Authentication:Issuer"],
-            ValidAudience = builder.Configuration["Authentication:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Authentication:Secret"])
-            ),
-        };
-    });
+builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
+    .AddCookie(IdentityConstants.ApplicationScheme);
+builder.Services.AddAuthorization();
+
+builder.Services.AddIdentityCore<BlogUser>()
+    .AddEntityFrameworkStores<BlogContext>()
+    .AddApiEndpoints();
 
 var app = builder.Build();
 
@@ -46,9 +37,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseAuthentication();
-
-app.UseAuthorization();
+app.MapIdentityApi<BlogUser>();
 
 app.MapControllers();
 

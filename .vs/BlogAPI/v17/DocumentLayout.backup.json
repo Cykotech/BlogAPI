@@ -3,16 +3,16 @@
   "WorkspaceRootPath": "E:\\Tech\\Projects\\Blog\\BlogAPI\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{DE93AAB4-B217-44B8-98D4-30D02F995133}|BlogAPI.csproj|e:\\tech\\projects\\blog\\blogapi\\blogapi.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}",
+      "RelativeMoniker": "D:0:0:{DE93AAB4-B217-44B8-98D4-30D02F995133}|BlogAPI.csproj|solutionrelative:blogapi.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{DE93AAB4-B217-44B8-98D4-30D02F995133}|BlogAPI.csproj|e:\\tech\\projects\\blog\\blogapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{DE93AAB4-B217-44B8-98D4-30D02F995133}|BlogAPI.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{DE93AAB4-B217-44B8-98D4-30D02F995133}|BlogAPI.csproj|e:\\tech\\projects\\blog\\blogapi\\controllers\\authenticationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{DE93AAB4-B217-44B8-98D4-30D02F995133}|BlogAPI.csproj|solutionrelative:controllers\\authenticationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{DE93AAB4-B217-44B8-98D4-30D02F995133}|BlogAPI.csproj|e:\\tech\\projects\\blog\\blogapi\\blogapi.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}",
-      "RelativeMoniker": "D:0:0:{DE93AAB4-B217-44B8-98D4-30D02F995133}|BlogAPI.csproj|solutionrelative:blogapi.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{DE93AAB4-B217-44B8-98D4-30D02F995133}|BlogAPI.csproj|e:\\tech\\projects\\blog\\blogapi\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -46,7 +46,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 272,
-          "SelectedChildIndex": 8,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Bookmark",
@@ -54,7 +54,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "AuthenticationController.cs",
               "DocumentMoniker": "E:\\Tech\\Projects\\Blog\\BlogAPI\\Controllers\\AuthenticationController.cs",
               "RelativeDocumentMoniker": "Controllers\\AuthenticationController.cs",
@@ -102,15 +102,16 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "BlogAPI.http",
               "DocumentMoniker": "E:\\Tech\\Projects\\Blog\\BlogAPI\\BlogAPI.http",
               "RelativeDocumentMoniker": "BlogAPI.http",
               "ToolTip": "E:\\Tech\\Projects\\Blog\\BlogAPI\\BlogAPI.http",
               "RelativeToolTip": "BlogAPI.http",
-              "ViewState": "AgIAAD4AAAAAAAAAAAAkwFcAAAADAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFcAAAADAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003502|",
-              "WhenOpened": "2024-10-17T17:20:05.136Z"
+              "WhenOpened": "2024-10-17T17:20:05.136Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -138,7 +139,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "Program.cs",
               "DocumentMoniker": "E:\\Tech\\Projects\\Blog\\BlogAPI\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",

@@ -4,11 +4,11 @@ namespace BlogAPI.Models
 {
     public class Comment
     {
-        public int Id { get; set; }
+        public int Id { get; init; }
         [Required] public string Content { get; set; }
-        [Required] public int PostId { get; set; }
-        public Post Post { get; set; }
-        [Required] public int AuthorId { get; set; }
-        public User Author { get; set; }
+        [Required] public int PostId { get; init; }
+        [Required] public Post Post { get; init; }
+        [Required] public string AuthorId { get; init; }
+        [Required] public BlogUser Author { get; init; }
     }
 }
