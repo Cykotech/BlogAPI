@@ -29,7 +29,7 @@ namespace BlogAPI.Controllers
 
             foreach (Post post in posts)
             {
-                response.Add(new PostDto(post.Id, post.Title, post.Content, post.Author.UserName));
+                response.Add(new PostDto(post.Id, post.Title, post.Content, post.Author.UserName, post.CreatedDate, post.Likes));
             }
 
             return Ok(response);
@@ -45,7 +45,7 @@ namespace BlogAPI.Controllers
             if (post == null)
                 return NotFound();
 
-            PostDto response = new(post.Id, post.Title, post.Content, post.Author.UserName);
+            PostDto response = new(post.Id, post.Title, post.Content, post.Author.UserName, post.CreatedDate, post.Likes);
 
             return Ok(response);
         }
@@ -63,7 +63,7 @@ namespace BlogAPI.Controllers
 
             foreach (Post post in postsByAuthor)
             {
-                response.Add(new PostDto(post.Id, post.Title, post.Content, post.Author.UserName));
+                response.Add(new PostDto(post.Id, post.Title, post.Content, post.Author.UserName, post.CreatedDate, post.Likes));
             }
 
             return Ok(response);
@@ -88,7 +88,8 @@ namespace BlogAPI.Controllers
             _context.Posts.Add(postEntity);
             await _context.SaveChangesAsync();
 
-            PostDto responseDto = new(postEntity.Id, postEntity.Title, postEntity.Content, postEntity.Author.UserName!);
+            PostDto responseDto = new(postEntity.Id, postEntity.Title, postEntity.Content, postEntity.Author.UserName!,
+                postEntity.CreatedDate);
 
             return CreatedAtAction(nameof(GetById), new { id = postEntity.Id }, responseDto);
         }
@@ -98,7 +99,7 @@ namespace BlogAPI.Controllers
         {
             if (!PostExists(id))
                 return NotFound();
-            
+
             Post? postEntity = await _context.Posts.Include(p => p.Author)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -132,7 +133,7 @@ namespace BlogAPI.Controllers
         {
             if (!PostExists(id))
                 return NotFound();
-            
+
             Post? postToRemove = await _context.Posts.Include(p => p.Author)
                 .FirstOrDefaultAsync(p => p.Id == id);
 

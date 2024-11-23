@@ -14,22 +14,40 @@ namespace BlogAPI.Controllers
     {
         private readonly BlogContext _context;
         private readonly UserManager<BlogUser> _userManager;
+        private readonly SignInManager<BlogUser> _signInManager;
 
-        public CommentsController(BlogContext context, UserManager<BlogUser> userManager)
+        public CommentsController(BlogContext context, UserManager<BlogUser> userManager, SignInManager<BlogUser> signInManager)
         {
             _context = context;
             _userManager = userManager;
+            _signInManager = signInManager;
         }
 
         [HttpGet("{id:int}")]
         public async Task<ActionResult<Comment>> GetCommentById(int id)
         {
-            Comment? comment = await _context.Comments.FindAsync(id);
+            Comment? comment = await _context.Comments.Include(comment => comment.Author)
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (comment == null)
                 return NotFound();
 
-            CommentDto response = new(comment.Id, comment.Content, comment.AuthorId);
+            CommentDto response = new(comment.Id, comment.Content, comment.Author.UserName);
+
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<List<Comment>>> GetCommentsByPostId([FromQuery] int postId)
+        {
+            List<Comment> comments = await _context.Comments.Where(c => c.PostId == postId)
+                .Include(comment => comment.Author).ToListAsync();
+            List<CommentDto> response = new(comments.Count);
+
+            foreach (Comment comment in comments)
+            {
+                response.Add(new CommentDto(comment.Id, comment.Content, comment.Author.UserName));
+            }
 
             return Ok(response);
         }
@@ -42,12 +60,13 @@ namespace BlogAPI.Controllers
             if (user == null)
                 return NotFound();
 
-            List<Comment> comments = await _context.Comments.Where(c => c.Author == user).ToListAsync();
+            List<Comment> comments = await _context.Comments.Where(c => c.Author == user)
+                .Include(comment => comment.Author).ToListAsync();
             List<CommentDto> commentsResponse = [];
 
             foreach (Comment comment in comments)
             {
-                CommentDto dto = new(comment.Id, comment.Content, comment.AuthorId);
+                CommentDto dto = new(comment.Id, comment.Content, comment.Author.UserName);
 
                 commentsResponse.Add(dto);
             }
@@ -79,7 +98,7 @@ namespace BlogAPI.Controllers
             _context.Comments.Add(commentEntity);
             await _context.SaveChangesAsync();
 
-            CommentDto responseDto = new(commentEntity.Id, commentEntity.Content, commentEntity.AuthorId);
+            CommentDto responseDto = new(commentEntity.Id, commentEntity.Content, commentEntity.Author.UserName);
 
             return CreatedAtAction(nameof(GetCommentById), new { id = commentEntity.Id }, responseDto);
         }
